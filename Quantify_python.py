@@ -1,6 +1,6 @@
 ## Para ejecutar:
 # abrir terminal donde se ubica el codigo
-# python3 Texto_A_Voz.py
+# python3 Quantify_python.py
 
 ## Dependencias necesarias:
 # pip install pygame
@@ -9,40 +9,45 @@
 # brew install portaudio #sudo apt install portaudio19-dev
 # pip install pyaudio
 # pip install pint
-
-## error pyaudio:
-# https://stackoverflow.com/questions/73268630/error-could-not-build-wheels-for-pyaudio-which-is-required-to-install-pyprojec
+# sudo apt-get install python3-tk
+# pip install ttkbootstrap unidecode
 
 from gtts import gTTS
-from io import BytesIO # convertir texto a audio
+from io import BytesIO # Convertir texto a audio
 import pygame
-import time # medir tiempo
-import os # borrar archivos
-import speech_recognition as sr # obtener audio
-import re # regex
-from pint import UnitRegistry, errors # unidades de conversion
+import time # Medir tiempo
+import os # Borrar archivos
+import speech_recognition as sr # Obtener audio
+import re # Regex
+from pint import UnitRegistry, errors # Unidades de conversion
+# Interfaz
+import tkinter as tk
+import ttkbootstrap as ttk
+from ttkbootstrap import Style
+import unidecode # Quitar Acentos
 
 ##Voz a texto
 recon = sr.Recognizer()
 recon.energy_threshold = 300
 mic = sr.Microphone()
-texto = "No se reconocio el audio correctamente." #valor por defecto
+texto = "No se reconocio el audio correctamente." # Valor por defecto
 
 def UnidadAIng(stringInicial):
     stringInicial = stringInicial.lower() #para evitar casos con mayusculas
+    stringInicial = unidecode.unidecode(stringInicial)
     if(stringInicial == "metros" or stringInicial == "m" or stringInicial == "metro" ):
         return "meter"
-    elif(stringInicial == "centimetros" or stringInicial == "cm" or stringInicial == "centimetro" ):
+    elif(stringInicial == "centimetros" or stringInicial == "cm" or stringInicial == "centimetro" or stringInicial == "centímetros" or stringInicial == "centímetro"):
         return "centimeter"
     elif(stringInicial == "milimetros" or stringInicial == "mm" or stringInicial == "milimetro" ):
-        return "milimeter"
+        return "millimeter"
     elif(stringInicial == "kilometros" or stringInicial == "km" or stringInicial == "kilometro" ):
         return "kilometer"
     elif(stringInicial == "micrometros" or stringInicial == "micrometro" ):
         return "micrometer"
     elif(stringInicial == "nanometros" or stringInicial == "nanometro" ):
         return "nanometer"
-    elif(stringInicial == "pulgadas" or stringInicial == "pulgadas" ):
+    elif(stringInicial == "pulgadas" or stringInicial == "pulgada" ):
         return "inch"
     elif(stringInicial == "pies" or stringInicial == "ft" or stringInicial == "pie" ):
         return "foot"
@@ -53,15 +58,15 @@ def UnidadAIng(stringInicial):
     elif(stringInicial == "litros" or stringInicial == "l" or stringInicial == "litro" ):
         return "liter"
     elif(stringInicial == "mililitros" or stringInicial == "ml" or stringInicial == "mililitro" ):
-        return "mililiter"
+        return "milliliter"
     elif(stringInicial == "galones" or stringInicial == "galon" ):
         return "gallon"
-    elif(stringInicial == "gramos" or stringInicial == "gr" or stringInicial == "gramo" ):
+    elif(stringInicial == "gramos" or stringInicial == "g" or stringInicial == "gramo" ):
         return "grams"
     elif(stringInicial == "kilogramos" or stringInicial == "kilogramo" ):
         return "kilograms"
     elif(stringInicial == "miligramos" or stringInicial == "miligramo" ):
-        return "miligram"
+        return "milligram"
     elif(stringInicial == "microgramos" or stringInicial == "microgramo" ):
         return "microgram"
     elif(stringInicial == "libras" or stringInicial == "libra" ):
@@ -108,18 +113,20 @@ def getMic():
             print('Error del sistema, no se encuentra disponible \n')
             return ("Error del sistema, no se encuentra disponible")
 
-## obtenemos audio del microfono
-while True:
+## Funcion principal
+def startRecording():
+	startRecordingBtn.config(text = "Grabando...")
+	startRecordingBtn.config(style = "danger.Outline.TButton")
+	startRecordingBtn.config(state="disabled")
+	startRecordingBtn.update_idletasks()
 	texto = getMic() # retornamos el string obtenido del audio capturado con el microfono
-
-	# string de prueba para el regex
-	    # texto = "por favor maquina convierte 5.44 centimetros a metros si quieres brou"
-		# texto = "5.44 gramos a kilogramos kilogramos kilogramos kilogramos"
-	    # texto = "realiza una converison de 60 celsius a fahrenheit no si tal vez"
-	    # texto = "convierte 25 litros a galones salir"
-		# texto = "cualquier texto que no contuviese una conversion"
+	audioCapturadoLabel.config(text = texto)
+	startRecordingBtn.config(text = "Esperando respuesta...")
+	startRecordingBtn.config(style = "warning.Outline.TButton")
+	startRecordingBtn.update_idletasks()
 	if "salir" in texto:
-		break
+		window.destroy()
+		return 0
 	regex = r"\b([\d.]+)\b\s+(\w+)\s+a\s+(\w+)"
 	resultados = re.search(regex, texto)
 	## evaluamos y realizamos la conversion
@@ -129,6 +136,9 @@ while True:
 			valor1_float = float(valor1)
 		except ValueError:
 			print("La unidad no se encontro o no se pudo realizar las conversiones")
+			texto = "La unidad no se encontro o no se pudo realizar las conversiones"
+			respuestaObtenidaLabel.config(text = texto)
+			return 0
 		valor2 = resultados.group(2)
 		valor2Eng = UnidadAIng(valor2) # checamos conversiones
 		valor3 = resultados.group(3)
@@ -140,20 +150,22 @@ while True:
 			resultado = valor1_float * ureg(valor2Eng).to(valor3Eng)
 			texto = f"{valor1_float} {valor2} en {valor3} son {round(resultado.magnitude,3)}"
 			print (texto)
+			respuestaObtenidaLabel.config(text = texto)
 		except errors.DimensionalityError as e:
 			print(f"Error: {e}")
 			texto = f"Error: {e}"
+			respuestaObtenidaLabel.config(text = texto)
 		except Exception as e:
 			print(f"Un error inesperado con las conversiones sucedio: {e}")
 			texto = f"Un error inesperado con las conversiones sucedio: Error: {e}"
+			respuestaObtenidaLabel.config(text = texto)
 	else:
 		print("No se encontraron coincidencias para hacer alguna conversion")
 		texto = "No se encontraron coincidencias para hacer alguna conversion"
+		respuestaObtenidaLabel.config(text = texto)
 		
 
 	##Texto a voz
-	# texto="Hola, aquí Julián"
-	# texto="5 kilometros son 5000 metros"
 	tts = gTTS(texto, lang='es')
 	mp3_fp = BytesIO()
 	tts.save("temp.mp3")
@@ -168,3 +180,29 @@ while True:
 		time.sleep(1)
 
 	os.remove("temp.mp3")
+	startRecordingBtn.config(text = "Empezar")
+	startRecordingBtn.config(style = "success.Outline.TButton")
+	startRecordingBtn.config(state="enabled")
+
+
+window = ttk.Window(
+	themename = 'minty', 
+	title = 'DB Metabolites GUI',
+	resizable = [0,0]
+	)
+
+titleLabel = ttk.Label(master = window, text = "Quantify - Conversor de Unidades", font='Calibri 21')
+titleLabel.pack(pady=(10, 0))
+mainFrame = ttk.Frame(window, height=900, width=590)
+mainFrame.pack(fill=tk.BOTH, expand=tk.YES, padx=10, pady=10)
+functionFrame = ttk.Labelframe(mainFrame, text = "Puedes empezar a hacer conversiones conmigo!")
+startRecordingBtn = ttk.Button(functionFrame, text = "Empezar", style = "success.Outline.TButton", command = startRecording)
+startRecordingBtn.pack(side = tk.TOP, padx=10, pady=25)
+audioCapturadoLabel = ttk.Label(functionFrame, text="")
+audioCapturadoLabel.pack(side = tk.TOP, padx=10, pady=0)
+respuestaObtenidaLabel = ttk.Label(functionFrame, text="")
+respuestaObtenidaLabel.pack(side = tk.TOP, padx=10, pady=0)
+functionFrame.pack(pady = 0, padx = 10, fill = "x")
+
+window.mainloop() #Hold here! active window
+
